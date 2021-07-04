@@ -1,0 +1,235 @@
+---
+title: 'Case_Study 1: Cyclistic bike-share'
+author: "Marzieh Soleimanpoor"
+date: "7/4/2021"
+output:
+  html_document:
+    df_print: paged
+    #output=github_document
+---
+
+## Business Task
+Financial analysts of Cyclistic have concluded that annual members are more profitable. Therefore, the main business task is to understand how annual members and casual riders use Cyclistic bikes differently to convert casual riders into annual members. 
+
+## Prepare
+I used eight months' historical trip data publicly available at  [divvy-tripdata](https://divvy-tripdata.s3.amazonaws.com/index.html). The data is in (.CSV) format, and each file contains 15 columns. 
+
+## Data Processing
+I cleaned up the data by removing duplicate and NA values records. I also created two additional columns called "ride_lengh" and “day_of_week” to analyze the duration and number of rides each day. First, I loaded the required packages and imported eight .xlsx files as data frames, using the following code chunk.
+
+
+### Load packages
+```{r, results="hide"}
+library(tidyverse)
+library(lubridate)
+library(ggplot2)
+library(dplyr)
+```
+## Read Data
+```{r, results="hide" }
+D_202004 <- read.csv("202004-divvy-tripdata.csv", header = TRUE)
+D_202005<-  read.csv("202005-divvy-tripdata.csv", header = TRUE)
+D_202006<-  read.csv("202006-divvy-tripdata.csv", header = TRUE)
+D_202007<-  read.csv("202007-divvy-tripdata.csv", header = TRUE)
+D_202008<-  read.csv("202008-divvy-tripdata.csv", header = TRUE)
+D_202009<-  read.csv("202009-divvy-tripdata.csv", header = TRUE)
+D_202010<-  read.csv("202010-divvy-tripdata.csv", header = TRUE)
+D_202011<-  read.csv("202011-divvy-tripdata.csv", header = TRUE)
+D_202012<-  read.csv("202012-divvy-tripdata.csv", header = TRUE)
+D_20201 <-  read.csv("202101-divvy-tripdata.csv", header = TRUE)
+D_20202 <-  read.csv("202102-divvy-tripdata.csv", header = TRUE)
+D_20203 <-  read.csv("202103-divvy-tripdata.csv", header = TRUE)
+D_20204 <-  read.csv("202104-divvy-tripdata.csv", header = TRUE)
+D_20205 <-  read.csv("202105-divvy-tripdata.csv", header = TRUE)
+str(D_202004)
+str(D_202005)
+str(D_202006)
+str(D_202007)
+str(D_202008)
+str(D_202009)
+str(D_202010)
+str(D_202011)
+str(D_202012)
+```
+## Analyze
+First, I aggregated data into a large data frame for analysis and created additional columns to list the date. Furthermore, to have more data analysis, as I mentioned, I add "ride_lengh" and “day_of_week” columns. I removed the data where the "ride_length" was negative and continued the analysis with fewer records.
+
+Trends and relationships:
+
+- Casual rider's average ride length is more than members. 
+- The average number of rides increases for both users from Monday to Saturday.
+- Both types of users mostly prefer to use the docked bike instead of the electric bike.  
+- Number of rides sharply increases from March to September.
+### Combine into a single file 
+Using mutate() function we change files with character format to number format.To make the data useful and accessible we should aggrigate them into a single file.
+
+```{r, include=FALSE}
+colnames(D_202004)
+colnames(D_202005)
+colnames(D_202006)
+colnames(D_202007)
+colnames(D_202008)
+colnames(D_202009)
+colnames(D_202010)
+colnames(D_202011)
+colnames(D_202012)
+
+D_202004 <-  mutate(D_202004, ride_id = as.character(ride_id)
+                    ,rideable_type = as.character(rideable_type))
+D_202005 <-  mutate(D_202005, ride_id = as.character(ride_id)
+                    ,rideable_type = as.character(rideable_type))
+D_202006 <-  mutate(D_202006, ride_id = as.character(ride_id)
+                    ,rideable_type = as.character(rideable_type))
+D_202007 <-  mutate(D_202007, ride_id = as.character(ride_id)
+                    ,rideable_type = as.character(rideable_type))
+D_202008 <-  mutate(D_202008, ride_id = as.character(ride_id)
+                    ,rideable_type = as.character(rideable_type))
+D_202009 <-  mutate(D_202009, ride_id = as.character(ride_id)
+                    ,rideable_type = as.character(rideable_type))
+D_202010 <-  mutate(D_202009, ride_id = as.character(ride_id)
+                    ,rideable_type = as.character(rideable_type))
+D_202011<-  mutate(D_202009, ride_id = as.character(ride_id)
+                   ,rideable_type = as.character(rideable_type))
+D_202012 <-  mutate(D_202009, ride_id = as.character(ride_id)
+                    ,rideable_type = as.character(rideable_type))
+
+all_trips <- bind_rows(D_202004, D_202005, D_202006, D_202007, D_202008, D_202009, D_202010, D_202011, D_202012)
+```
+### Clean up and prepare for analysis 
+```{r,results="hide"}
+colnames(all_trips)  
+nrow(all_trips)  
+dim(all_trips)  
+head(all_trips)  
+str(all_trips)  
+summary(all_trips)
+table(all_trips$member_casual)
+all_trips <-  all_trips %>% 
+  mutate(member_casual = recode(member_casual
+                                ,"Subscriber" = "member"
+                                ,"Customer" = "casual"))
+table(all_trips$member_casual)
+all_trips$date <- as.Date(all_trips$started_at) 
+all_trips$month <- format(as.Date(all_trips$date), "%m")
+all_trips$day <- format(as.Date(all_trips$date), "%d")
+all_trips$year <- format(as.Date(all_trips$date), "%Y")
+all_trips$day_of_week <- format(as.Date(all_trips$date), "%A")
+
+all_trips$ride_length <- difftime(all_trips$ended_at,all_trips$started_at)
+str(all_trips)
+is.factor(all_trips$ride_length)
+all_trips$ride_length <- as.numeric(as.character(all_trips$ride_length))
+is.numeric(all_trips$ride_length)
+all_trips_s <- all_trips[!(all_trips$start_station_name == "HQ QR" | all_trips$ride_length<0),]
+```
+
+
+```{r}
+mean(all_trips_s$ride_length) 
+median(all_trips_s$ride_length)  
+max(all_trips_s$ride_length) 
+min(all_trips_s$ride_length)
+summary(all_trips_s$ride_length)/60
+aggregate(all_trips_s$ride_length/60 ~ all_trips_s$member_casual, FUN = mean)
+aggregate(all_trips_s$ride_length/60 ~ all_trips_s$member_casual, FUN = median)
+aggregate(all_trips_s$ride_length/60 ~ all_trips_s$member_casual, FUN = max)
+aggregate(all_trips_s$ride_length/60 ~ all_trips_s$member_casual, FUN = min)
+aggregate(all_trips_s$ride_length/60 ~ all_trips_s$member_casual + all_trips_s$day_of_week, FUN = mean)
+all_trips_s$day_of_week <- ordered(all_trips_s$day_of_week, levels=c("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"))
+aggregate(all_trips_s$ride_length/60 ~ all_trips_s$member_casual + all_trips_s$day_of_week, FUN = mean)
+```
+
+
+```{r, results="hide"}
+# analyze ridership data by type and weekday
+all_trips_s%>% 
+  mutate(weekday = wday(started_at, label = TRUE)) %>%  
+  group_by(member_casual, weekday) %>%  
+  summarise(number_of_rides = n()							
+            ,average_duration = mean(ride_length/60)) %>% 		
+  arrange(member_casual, weekday)								
+```
+## Share
+To present the result of the analysis, ggplot2 is used for visualizations. 
+
+You can see a summary of our findings from the above analysis:
+- Each ride took almost 30 minutes On average. 
+- Ride length for casual users is almost 45 minutes on average.
+- Ride length for member users is almost 17 minutes on average. 
+- The most number of rides for both types of users is on Saturday. 
+- Casual users mostly rent bikes on the weekend for leisure activities. However, members rent bikes consistently during the week, considering that members use this service for their daily usages, such as work or school.
+- The most popular type of bike among all users is docked bike in terms of number and duration of rides. 
+- Peak usage of all rental bikes is in the summer, and it will decrease as the weather get colder.
+
+
+
+### Plot
+```{r, results="hide"}
+all_trips_s %>% 
+  mutate(weekday = wday(started_at, label = TRUE)) %>% 
+  group_by(member_casual, weekday) %>% 
+  summarise(number_of_rides = n()
+            ,average_duration = mean(ride_length/60)) %>% 
+  arrange(member_casual, weekday)  %>% 
+  ggplot(aes(x = weekday, y = number_of_rides, fill = member_casual)) +
+  geom_col(position = "dodge")+labs(title="Average number of rides during week")+scale_fill_manual(values=c("#999999", "#E69F00"))
+```
+
+
+```{r, results="hide"}
+
+all_trips_s %>% 
+  mutate(weekday = wday(started_at, label = TRUE)) %>% 
+  group_by(member_casual, weekday) %>% 
+  summarise(number_of_rides = n()
+            ,average_duration = mean(ride_length/60)) %>% 
+  arrange(member_casual, weekday)  %>% 
+  ggplot(aes(x = weekday, y = average_duration, fill = member_casual)) +
+  geom_col(position = "dodge")+labs(title="Average ride duration during week")+scale_fill_manual(values=c("#999999", "#E69F00"))
+```
+
+
+```{r, results="hide"}
+all_trips_s %>% 
+  group_by(member_casual, month) %>% 
+  summarise(number_of_rides = n()
+            ,average_duration = mean(ride_length/60)) %>% 
+  arrange(member_casual, month)  %>% 
+  ggplot(aes(x = month, y = number_of_rides, group = member_casual)) +
+  geom_line(aes(color = member_casual)) + 
+  geom_point() +
+  labs(title = " Number of Rides by Month") 
+ 
+```
+
+
+```{r, results="hide"}
+all_trips_s %>% 
+  group_by(member_casual, rideable_type) %>% 
+  summarise(number_of_rides = n()
+            ,average_duration = mean(ride_length/60)) %>% 
+  arrange(member_casual, rideable_type)  %>% 
+  ggplot(aes(x = rideable_type, y = number_of_rides, fill = member_casual)) +
+  geom_col(position = "dodge") + 
+  labs(title = " Number of Rides by Bike Type ")+scale_fill_manual(values=c("#999999", "#E69F00")) 
+  
+```
+
+```{r, results="hide"}
+all_trips_s %>% 
+  group_by(member_casual, ride_length) %>% 
+  summarise(weekday = wday(started_at, label = TRUE)
+            ,average_duration = mean(ride_length/60)) %>% 
+  arrange(member_casual, ride_length)  %>% 
+  ggplot(aes(x = weekday , y = all_trips_s$ride_length/60 , fill = member_casual)) +
+  geom_point(position = "jitter")+labs(title=" ride length of users during week")+scale_fill_manual(values=c("#999999", "#E69F00"))
+```
+## Act
+
+My recommendations for the stakeholders:
+
+1) Cyclistic can increase the rent price during the weekend, motivating casual users to get an annual membership.
+2) As a new marketing strategy, Cyclistic team can consider some kind of side benefit (i.e. Insurance, Discount for first annual membership )
+3) Consider some competition during peak usage months
+
+
